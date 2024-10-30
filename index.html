@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Search with Directions</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { max-width: 600px; margin: auto; text-align: center; padding: 20px; }
+        #results { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+        .result-card { width: 200px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; text-align: left; cursor: pointer; }
+        .result-card img { width: 100%; height: auto; border-radius: 8px; }
+        input, button { padding: 8px; font-size: 16px; }
+        #directions { margin-top: 20px; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Search for Restaurants</h1>
+    <input type="text" id="location-input" placeholder="Enter a location (e.g., Sydney)">
+    <button onclick="searchRestaurants()">Search</button>
+    <div id="results"></div>
+    <div id="directions"></div> <!-- Directions container -->
+</div>
+
+<script>
+    const apiKey = 'd89ea874f4mshf96320c65c2f8adp13e74fjsnd93f69d7b765'; // Your RapidAPI key
+
+    async function searchRestaurants() {
+        const location = document.getElementById("location-input").value;
+
+        if (!location) {
+            alert("Please enter a location.");
+            return;
+        }
+
+        const searchUrl = `https://google-map-places.p.rapidapi.com/maps/api/place/textsearch/json?query=restaurants%20in%20${encodeURIComponent(location)}&radius=1000&opennow=true&language=en&region=en`;
+        
+        const options = {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'google-map-places.p.rapidapi.com'
+            }
+        };
+
+        try {
+            const response = await fetch(searchUrl, options);
+            const data = await response.json();
+            displayResults(data.results);
+        } catch (error) {
+            console.error("Error fetching restaurant data:", error);
+            alert("Could not fetch data. Please try again.");
+        }
+    }
+
+    function displayResults(results) {
+        const resultsContainer = document.getElementById("results");
+        resultsContainer.innerHTML = ""; // Clear previous results
+        document.getElementById("directions").innerHTML = ""; // Clear previous directions
+
+        if (results && results.length > 0) {
+            for (const place of results) {
+                const card = document.createElement("div");
+                card.classList.add("result-card");
+
+                const title = document.createElement("h3");
+                title.textContent = place.name;
+
+                const address = document.createElement("p");
+                address.textContent = place.formatted_address || "No address available";
+
+                // Fetch the photo for each place
+                let img = document.createElement("img");
+                if (place.photos && place.photos.length > 0) {
+                    const photoReference = place.photos[0].photo_reference;
+                    const photoUrl = `https://google-map-places.p.rapidapi.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoReference}`;
+                    
+                    img.src = photoUrl;
+                } else {
+                    img.src = 'https://via.placeholder.com/200';
+                }
+
+                // Add click event to get directions
+                card.onclick = () => {
+                    const userLocation = "32.0852999,34.78176759999999"; // Set user's location here (latitude, longitude)
+                    const destinationLocation = `${place.geometry.location.lat},${place.geometry.location.lng}`;
+                    getDirections(userLocation, destinationLocation);
+                };
+
+                card.appendChild(img);
+                card.appendChild(title);
+                card.appendChild(address);
+                resultsContainer.appendChild(card);
+            }
+        } else {
+            resultsContainer.innerHTML = "<p>No restaurants found for this location.</p>";
+        }
+    }
+
+    function getDirections(origin, destination) {
+        const directionsUrl = `https://waze.com/ul?q=${destination}&ll=${destination}&navigate=yes`;
+        
+        // Create a link to Waze directions
+        const directionsContainer = document.getElementById("directions");
+        directionsContainer.innerHTML = `<a href="${directionsUrl}" target="_blank">Get Directions to ${destination}</a>`;
+    }
+</script>
+
+</body>
+</html>
